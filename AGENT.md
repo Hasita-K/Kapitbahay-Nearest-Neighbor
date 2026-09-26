@@ -1,7 +1,7 @@
 # Project Guidelines for Kapitbahay-Nearest-Neighbors 
 
 ## Project Overview
--Hi it's me it's verity. The purpose of this file is to allow an AI agent to gain valuable insights when given instruction when working on the following project. 
+-Hi. The purpose of this file is to allow an AI agent to gain valuable insights when given instruction when working on the following project. KNN is a Phillipine province inspired mobile app built with React Native, Node.js, and PostgreSQL that allows you to create custom "villages" with close friends to inventory and trade excess fridge ingredients. It features an interactive top downisland interface, custom fridge management, and a dedicated state machine handling trade requests, counter offers, and reputation stats
 
 ## Techstack
 **Framework**: React Native (`~54.0.36`)
