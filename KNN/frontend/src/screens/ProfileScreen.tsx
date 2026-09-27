@@ -31,11 +31,11 @@ export function ProfileScreen({ onNavigate }: { onNavigate: (screen: Screen) => 
             <Text style={styles.profileAvatarLabel}>A</Text>
             <Text style={styles.profileAvatarSpark}>✦</Text>
           </View>
-          <Text style={styles.profileName}>Ana Santos</Text>
-          <Text style={styles.profileHandle}>@ana_sa_hapag</Text>
+          <Text style={styles.profileName}>John Ruiz</Text>
+          <Text style={styles.profileHandle}>@john_sa_hapag</Text>
           <View style={styles.villageChip}>
             <View style={styles.villageDot} />
-            <Text style={styles.villageChipLabel}>San Isidro Circle</Text>
+            <Text style={styles.villageChipLabel}>UCF Friends Circle</Text>
           </View>
         </View>
 

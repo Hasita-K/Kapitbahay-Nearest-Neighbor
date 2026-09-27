@@ -18,9 +18,9 @@ import { colors, fonts, shadows } from '../theme/theme';
 
 // matches the `villagers` array + .hut-mika/.hut-jo/.hut-tala position rules
 const villagers = [
-  { name: 'Mika', note: 'Herbs & eggs', position: { top: 220, right: 40 } },
-  { name: 'Jo', note: 'Rice & pantry', position: { top: 390, left: 30, scale: 0.9 } },
-  { name: 'Tala', note: 'Fruit & greens', position: { right: 36, bottom: 118, scale: 0.82 } },
+  { name: 'Hasita', note: 'Herbs & eggs', position: { top: 220, right: 40 } },
+  { name: 'Reese', note: 'Rice & pantry', position: { top: 390, left: 30, scale: 0.9 } },
+  { name: 'Shanelle', note: 'Fruit & greens', position: { right: 36, bottom: 118, scale: 0.82 } },
 ];
 
 export function HomeScreen({ navigation }: any) {
@@ -37,8 +37,8 @@ export function HomeScreen({ navigation }: any) {
 
       <View style={styles.topbar}>
         <View>
-          <Text style={styles.eyebrow}>Good morning, Ana</Text>
-          <Text style={styles.title}>San Isidro Circle</Text>
+          <Text style={styles.eyebrow}>Good morning, John</Text>
+          <Text style={styles.title}>UCF Friends Circle</Text>
         </View>
       </View>
 

@@ -57,7 +57,7 @@ export function TradeScreen({ onNavigate }: { onNavigate: (screen: Screen) => vo
               <Text style={styles.avatarLabel}>M</Text>
             </View>
             <View style={styles.tradePerson}>
-              <Text style={styles.tradePersonName}>Mika proposed a trade</Text>
+              <Text style={styles.tradePersonName}>Hasita proposed a trade</Text>
               <Text style={styles.tradePersonMeta}>Between your two pantries</Text>
             </View>
             <View
