@@ -1,20 +1,15 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { LoginScreen } from './Loginpage';
+import { SignupScreen } from './SignupScreen';
+
+type Mode = 'login' | 'signup';
 
 export default function App() {
-  return (
-    <View style={styles.container}>
-      <Text>hi hasita!</Text>
-      <StatusBar style="auto" />
-    </View>
+  const [mode, setMode] = useState<Mode>('login');
+
+  return mode === 'login' ? (
+    <LoginScreen onEnter={() => {}} onSwitchToSignup={() => setMode('signup')} />
+  ) : (
+    <SignupScreen onEnter={() => {}} onSwitchToLogin={() => setMode('login')} />
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
