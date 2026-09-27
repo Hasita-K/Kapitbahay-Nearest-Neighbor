@@ -1,55 +1,57 @@
 // Field.tsx
 import React from 'react';
-import { View, Text, TextInput, StyleSheet } from 'react-native';
+import { StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
 import { colors, fonts } from '../theme/theme';
 
-type Props = {
+type FieldProps = {
   label: string;
   placeholder: string;
   secureTextEntry?: boolean;
-  keyboardType?: 'default' | 'phone-pad';
+  keyboardType?: TextInputProps['keyboardType'];
   value?: string;
   onChangeText?: (text: string) => void;
 };
 
-export function Field({ label, placeholder, secureTextEntry, keyboardType = 'default', value, onChangeText }: Props) {
+export function Field({ label, placeholder, secureTextEntry, keyboardType, value, onChangeText }: FieldProps) {
   return (
-    <View style={styles.wrap}>
+    <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
+        style={styles.input}
         placeholder={placeholder}
         placeholderTextColor="rgba(92, 83, 71, 0.42)"
         secureTextEntry={secureTextEntry}
         keyboardType={keyboardType}
         value={value}
         onChangeText={onChangeText}
-        style={styles.input}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: 7 },
+  field: { gap: 7 },
   label: {
     paddingLeft: 4,
     color: colors.brownSoft,
     fontSize: 11,
     fontFamily: fonts.sansBold,
-    letterSpacing: 0.8,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
   },
   input: {
+    width: '100%',
     height: 52,
     paddingHorizontal: 17,
     color: colors.brown,
-    fontFamily: fonts.sans,
-    fontSize: 15,
     borderWidth: 1,
     borderColor: 'rgba(92, 83, 71, 0.1)',
+    backgroundColor: 'rgba(244, 239, 225, 0.54)',
+    fontFamily: fonts.sans,
+    // matches web's asymmetric 18px 18px 18px 7px radius
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     borderBottomRightRadius: 18,
     borderBottomLeftRadius: 7,
-    backgroundColor: 'rgba(244, 239, 225, 0.54)',
   },
 });

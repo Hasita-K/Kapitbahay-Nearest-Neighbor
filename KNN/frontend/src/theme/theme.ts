@@ -66,3 +66,19 @@ export const radii = {
   md: 22,
   full: 999,
 };
+
+export const foodFills = {
+  cream: '#f4efe1',
+  yolk: '#e9b95f',
+  green: '#a9c097',
+  water: '#bfdce0',
+  coral: '#e98f6e',
+  coralSoft: '#f0c7c9',
+};
+
+export const tileTones = {
+  sage: 'rgba(220,230,212,0.72)',
+  blue: 'rgba(224,238,240,0.82)',
+  blush: 'rgba(248,229,226,0.82)',
+  coral: 'rgba(233,143,110,0.18)',
+};

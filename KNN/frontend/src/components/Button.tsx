@@ -1,115 +1,84 @@
 // Button.tsx
-// The web version used one <button> with CSS modifier classes
-// (primary, secondary, wide, icon-button, ghost, text-button). RN has no
-// cascading classes, so each variant becomes an explicit prop that picks a
-// style object instead.
+// The web version was one component that took an arbitrary `className` string
+// ("primary wide", "icon-button ghost", etc.) and let CSS handle every visual
+// variant. RN has no CSS classes, so this stays a thin Pressable wrapper —
+// screens pass an array of StyleSheet objects via `style` to get the same
+// composability (e.g. style={[styles.primary, styles.wide]}).
 import React from 'react';
-import { Pressable, Text, StyleSheet, ViewStyle, StyleProp } from 'react-native';
-import { colors, fonts, radii, shadows } from '../theme/theme';
+import { AccessibilityRole, Pressable, StyleProp, StyleSheet, ViewStyle } from 'react-native';
 
-type Variant = 'primary' | 'secondary' | 'text' | 'icon' | 'iconPale' | 'iconGhost';
-
-type Props = {
+type ButtonProps = {
   children: React.ReactNode;
-  variant?: Variant;
-  wide?: boolean;
+  style?: StyleProp<ViewStyle>;
   onPress?: () => void;
   disabled?: boolean;
-  style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
+  accessibilityRole?: AccessibilityRole;
 };
 
-export function AppButton({
+export function Button({
   children,
-  variant = 'primary',
-  wide = false,
+  style,
   onPress,
   disabled,
-  style,
   accessibilityLabel,
-}: Props) {
+  accessibilityRole = 'button',
+}: ButtonProps) {
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      accessibilityRole="button"
+      accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel}
       style={({ pressed }) => [
         styles.base,
-        variantStyles[variant],
-        wide && styles.wide,
-        pressed && { opacity: 0.85 },
-        disabled && { opacity: 0.5 },
         style,
+        pressed && !disabled && styles.pressed,
+        disabled && styles.disabled,
       ]}
     >
-      {typeof children === 'string' ? (
-        <Text style={[styles.label, variant === 'text' && styles.textLabel]}>{children}</Text>
-      ) : (
-        children
-      )}
+      {children}
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
-  base: {
-    minHeight: 54,
-    paddingHorizontal: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    // matches the web's asymmetric "22px 22px 22px 8px" corner treatment —
-    // RN's borderRadius shorthand doesn't support 4 independent corners on
-    // Android reliably, so set each corner explicitly.
-    borderTopLeftRadius: radii.md,
-    borderTopRightRadius: radii.md,
-    borderBottomRightRadius: radii.md,
-    borderBottomLeftRadius: 8,
-  },
-  wide: { alignSelf: 'stretch' },
-  label: {
-    fontFamily: fonts.sansBold,
-    fontSize: 15,
-    letterSpacing: 0.3,
-    color: colors.brown,
-  },
-  textLabel: { color: colors.brownSoft, fontFamily: fonts.sansMedium },
-});
-
-const variantStyles: Record<Variant, ViewStyle> = {
-  primary: { backgroundColor: colors.sage, ...shadows.primaryButton },
-  secondary: {
-    backgroundColor: colors.waterPale,
-    borderWidth: 1,
-    borderColor: 'rgba(120, 144, 106, 0.12)',
-  },
-  text: { minHeight: 44, backgroundColor: 'transparent' },
-  icon: {
-    width: 42,
-    height: 42,
-    minHeight: 42,
-    paddingHorizontal: 0,
-    borderRadius: radii.full,
-    backgroundColor: 'rgba(255, 250, 240, 0.72)',
-    borderWidth: 1,
-    borderColor: colors.line,
-  },
-  iconPale: {
-    width: 42,
-    height: 42,
-    minHeight: 42,
-    paddingHorizontal: 0,
-    borderRadius: radii.full,
-    backgroundColor: colors.sagePale,
-  },
-  iconGhost: {
-    width: 42,
-    height: 42,
-    minHeight: 42,
-    paddingHorizontal: 0,
-    borderRadius: radii.full,
-    backgroundColor: 'transparent',
-  },
+type AppButtonProps = ButtonProps & {
+  variant?: 'primary' | 'text' | 'iconPale' | 'iconGhost';
+  wide?: boolean;
 };
+
+// Compatibility wrapper for screens that still use the original variant API.
+export function AppButton({ variant = 'text', wide = false, style, children, ...props }: AppButtonProps) {
+  return (
+    <Button
+      {...props}
+      style={[styles.variantBase, styles[variant], wide && styles.wide, style]}
+    >
+      {children}
+    </Button>
+  );
+}
+
+const styles = StyleSheet.create({
+  base: {},
+  // matches .button:active { transform: scale(0.97) }
+  pressed: { transform: [{ scale: 0.97 }] },
+  // matches .button:disabled { opacity: .45 }
+  disabled: { opacity: 0.45 },
+  variantBase: { alignItems: 'center', justifyContent: 'center' },
+  primary: {
+    minHeight: 52,
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: 20,
+    backgroundColor: '#a9c097',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderBottomRightRadius: 20,
+    borderBottomLeftRadius: 7,
+  },
+  text: { padding: 8 },
+  iconPale: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#dce6d4' },
+  iconGhost: { width: 40, height: 40, borderRadius: 20 },
+  wide: { width: '100%' },
+});

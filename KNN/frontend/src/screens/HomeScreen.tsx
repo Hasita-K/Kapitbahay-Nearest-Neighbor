@@ -13,6 +13,7 @@ import { Icon } from '../components/Icon';
 import { Hut } from '../components/Hut';
 import { WatercolorMarks } from '../components/WatercolorMarks';
 import { AddVillagerModal } from '../components/AddVillagerModal';
+import { BottomNav } from '../navigation/BottomNav';
 import { colors, fonts, shadows } from '../theme/theme';
 
 // matches the `villagers` array + .hut-mika/.hut-jo/.hut-tala position rules
@@ -74,6 +75,7 @@ export function HomeScreen({ navigation }: any) {
         </Pressable>
       </View>
 
+      <BottomNav current="home" onNavigate={(screen) => navigation.navigate(screen)} />
       <AddVillagerModal visible={showAdd} onClose={() => setShowAdd(false)} />
     </View>
   );
