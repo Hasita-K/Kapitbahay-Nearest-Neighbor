@@ -11,11 +11,38 @@ import { Field } from '../components/Field';
 import { Icon } from '../components/Icon';
 import { WatercolorMarks } from '../components/WatercolorMarks';
 import { colors, fonts } from '../theme/theme';
+import { authErrorMessage, signIn, signUp, type AuthResult } from '../services/auth';
 
 type Mode = 'login' | 'signup';
 
-export function AuthScreen({ onEnter, onAbout }: { onEnter: () => void; onAbout: () => void }) {
+export function AuthScreen({ onAuthenticated, onAbout }: { onAuthenticated: (result: AuthResult) => void; onAbout: () => void }) {
   const [mode, setMode] = useState<Mode>('login');
+  const [username, setUsername] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const submit = async () => {
+    const cleanUsername = username.trim();
+    if (!cleanUsername || !password || (mode === 'signup' && !phoneNumber.trim())) {
+      setError(mode === 'signup' ? 'Enter a username, phone number, and password.' : 'Enter your username and password.');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    try {
+      const result = mode === 'login'
+        ? await signIn(cleanUsername, password)
+        : await signUp(cleanUsername, password, phoneNumber.trim());
+      onAuthenticated(result);
+    } catch (requestError) {
+      setError(authErrorMessage(requestError));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <View style={styles.screen}>
@@ -56,18 +83,24 @@ export function AuthScreen({ onEnter, onAbout }: { onEnter: () => void; onAbout:
         </View>
 
         <View style={styles.formStack}>
-          {mode === 'signup' && <Field label="Username" placeholder="What should villagers call you?" />}
           <Field
-            label={mode === 'login' ? 'Username or phone' : 'Phone number'}
-            placeholder={mode === 'login' ? 'maria_luisa' : '+63 917 123 4567'}
-            keyboardType={mode === 'signup' ? 'phone-pad' : 'default'}
+            label="Username"
+            placeholder="maria_luisa"
+            value={username}
+            onChangeText={setUsername}
+            autoCapitalize="none"
+            autoComplete="username"
           />
-          <Field label="Password" placeholder="••••••••••" secureTextEntry />
+          {mode === 'signup' && (
+            <Field label="Phone number" placeholder="+63 917 123 4567" keyboardType="phone-pad" value={phoneNumber} onChangeText={setPhoneNumber} autoComplete="tel" />
+          )}
+          <Field label="Password" placeholder="••••••••••" secureTextEntry value={password} onChangeText={setPassword} autoCapitalize="none" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} />
         </View>
 
-        <AppButton variant="primary" wide onPress={onEnter}>
+        {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
+        <AppButton variant="primary" wide onPress={submit} disabled={loading}>
           <Text style={styles.primaryLabel}>
-            {mode === 'login' ? 'Enter your village' : 'Plant your first village'}
+            {loading ? 'Please wait…' : mode === 'login' ? 'Enter your village' : 'Plant your first village'}
           </Text>
           <Icon name="arrow" size={18} color={colors.brown} />
         </AppButton>
@@ -123,4 +156,5 @@ const styles = StyleSheet.create({
   formStack: { gap: 14, marginBottom: 20 },
   primaryLabel: { fontFamily: fonts.sansBold, fontSize: 15, color: colors.brown },
   gentleNote: { marginTop: 16, textAlign: 'center', fontSize: 12, color: colors.brownSoft, fontFamily: fonts.sans },
+  error: { color: '#a33b32', fontSize: 13, fontFamily: fonts.sans, marginBottom: 12, textAlign: 'center' },
 });

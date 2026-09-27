@@ -10,9 +10,11 @@ type FieldProps = {
   keyboardType?: TextInputProps['keyboardType'];
   value?: string;
   onChangeText?: (text: string) => void;
+  autoCapitalize?: TextInputProps['autoCapitalize'];
+  autoComplete?: TextInputProps['autoComplete'];
 };
 
-export function Field({ label, placeholder, secureTextEntry, keyboardType, value, onChangeText }: FieldProps) {
+export function Field({ label, placeholder, secureTextEntry, keyboardType, value, onChangeText, autoCapitalize, autoComplete }: FieldProps) {
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
@@ -24,6 +26,8 @@ export function Field({ label, placeholder, secureTextEntry, keyboardType, value
         keyboardType={keyboardType}
         value={value}
         onChangeText={onChangeText}
+        autoCapitalize={autoCapitalize}
+        autoComplete={autoComplete}
       />
     </View>
   );

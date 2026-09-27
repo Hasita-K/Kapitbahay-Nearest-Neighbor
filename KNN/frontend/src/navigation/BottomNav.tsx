@@ -9,6 +9,7 @@ import { MyPantryScreen } from '../screens/MyPantryScreen';
 import { TradeScreen } from '../screens/TradeScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import type { Screen } from '../types';
+import type { AuthSession } from '../services/auth';
 
 type Tab = 'home' | 'my-pantry' | 'trades' | 'profile';
 
@@ -42,7 +43,7 @@ export function BottomNav({ current, onNavigate }: BottomNavProps) {
 
 // App.tsx mounts this component as its Main screen. Keep the tab selection
 // here so the converted screens can share the custom bottom navigation.
-export function VillageTabs() {
+export function VillageTabs({ session: _session }: { session: AuthSession | null }) {
   const [current, setCurrent] = useState<Tab>('home');
   const navigate = (screen: Screen) => {
     if (screen === 'home') setCurrent('home');
