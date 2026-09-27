@@ -19,4 +19,13 @@ async function get(req, res, next) {
   }
 }
 
-module.exports = { upload, get };
+async function listMine(req, res, next) {
+  try {
+    const photos = await service.listMine(req.supabase, req.user.id);
+    res.json({ data: photos });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { upload, get, listMine };

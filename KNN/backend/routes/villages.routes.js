@@ -7,6 +7,7 @@ const controller = require('../controllers/villages.controller');
 router.use(requireAuth);
 
 router.get('/', controller.listMine);
+router.get('/lookup', controller.lookup);
 router.post('/', controller.create);
 router.post('/:villageId/members', controller.addMember);
 router.delete('/:villageId/members/:memberId', controller.removeMember);

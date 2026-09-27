@@ -39,10 +39,18 @@ async function getPhoto(supabase, requestId) {
   return data;
 }
 
+async function listMine(supabase, userId) {
+  const { data, error } = await supabase.from('photos')
+    .select('photo_id,request_id,uploader_id,photo_url,created_at')
+    .eq('uploader_id', userId).order('created_at', { ascending: false });
+  if (error) throwHttp(error.message, 400);
+  return data;
+}
+
 function throwHttp(message, status) {
   const e = new Error(message);
   e.status = status;
   throw e;
 }
 
-module.exports = { recordPhoto, getPhoto };
+module.exports = { recordPhoto, getPhoto, listMine };

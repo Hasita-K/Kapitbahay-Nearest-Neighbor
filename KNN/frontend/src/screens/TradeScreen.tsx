@@ -1,5 +1,5 @@
 // TradeScreen.tsx
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../components/Button';
 import { Field } from '../components/Field';
@@ -7,151 +7,98 @@ import { FoodIcon } from '../components/FoodIcon';
 import { Icon } from '../components/Icon';
 import { BottomNav } from '../navigation/BottomNav';
 import { colors, fonts, radii, shadows } from '../theme/theme';
-import type { Screen } from '../types';
+import type { Screen, FoodName } from '../types';
+import { apiErrorMessage } from '../services/api';
+import { acceptFoodRequest, counterFoodRequest, getFoodRequests, getMyProfile, rejectFoodRequest, thankFoodRequest, updateFoodOffer, type FoodRequest } from '../services/data';
 
-type Outcome = 'pending' | 'accepted' | 'declined';
+export function TradeScreen({ onNavigate }: { onNavigate: (screen: Screen, params?: Record<string, string>) => void }) {
+  const [requests, setRequests] = useState<FoodRequest[]>([]);
+  const [userId, setUserId] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState('');
+  const [error, setError] = useState('');
 
-export function TradeScreen({ onNavigate }: { onNavigate: (screen: Screen) => void }) {
-  const [countering, setCountering] = useState(false);
-  const [outcome, setOutcome] = useState<Outcome>('pending');
+  const load = useCallback(async () => {
+    try {
+      setError('');
+      const [profile, trades] = await Promise.all([getMyProfile(), getFoodRequests()]);
+      setUserId(profile.id); setRequests(trades);
+    } catch (e) { setError(apiErrorMessage(e)); }
+    finally { setLoading(false); }
+  }, []);
+  useEffect(() => { void load(); }, [load]);
 
-  return (
-    <View style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <View style={styles.headerTitle}>
-            <Text style={styles.eyebrow}>Village exchanges</Text>
-            <Text style={styles.title}>Trades</Text>
+  const act = async (request: FoodRequest, action: 'accept' | 'reject' | 'counter' | 'offer' | 'thank') => {
+    setBusyId(request.food_request_id); setError('');
+    try {
+      if (action === 'accept') await acceptFoodRequest(request.food_request_id);
+      if (action === 'reject') await rejectFoodRequest(request.food_request_id);
+      if (action === 'counter') await counterFoodRequest(request.food_request_id);
+      if (action === 'offer') await updateFoodOffer(request.food_request_id,
+        request.offered_items.map((row) => ({ item_id: row.item_id, qty: row.qty })));
+      if (action === 'thank') await thankFoodRequest(request.food_request_id);
+      await load();
+    } catch (e) { setError(apiErrorMessage(e)); }
+    finally { setBusyId(''); }
+  };
+
+  const activeCount = requests.filter((request) => ['pending', 'countered'].includes(request.status)).length;
+  const waitingCount = requests.filter((request) => request.awaiting_response_from === userId).length;
+  const iconFor = (icon: string | null | undefined): FoodName => {
+    const names: FoodName[] = ['eggs', 'calamansi', 'garlic', 'coconut', 'chili', 'rice', 'soup', 'herbs'];
+    return names.includes(icon as FoodName) ? icon as FoodName : 'rice';
+  };
+
+  return <View style={styles.screen}>
+    <ScrollView contentContainerStyle={styles.scrollContent}>
+      <View style={styles.header}><View style={styles.headerTitle}><Text style={styles.eyebrow}>Village exchanges</Text><Text style={styles.title}>Trades</Text></View></View>
+      <View style={styles.summaryRow}>
+        <View style={[styles.summaryCard, shadows.soft]}><Text style={styles.summaryValue}>{waitingCount}</Text><Text style={styles.summaryLabel}>needs your reply</Text></View>
+        <View style={[styles.summaryCard, styles.summaryCardBlue]}><Text style={styles.summaryValue}>{activeCount}</Text><Text style={styles.summaryLabel}>active trades</Text></View>
+      </View>
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {loading ? <Text style={styles.empty}>Loading trades...</Text> : null}
+      {!loading && requests.length === 0 ? <View style={styles.empty}><Text style={styles.emptyTitle}>No trades yet</Text><Text>Visit a neighbor's pantry to start an exchange.</Text></View> : null}
+      {requests.map((request) => {
+        const isRequester = request.requester_id === userId;
+        const other = isRequester ? request.receiver : request.requester;
+        const myTurn = request.awaiting_response_from === userId;
+        const isBusy = busyId === request.food_request_id;
+        const offered = request.offered_items || [];
+        const requested = request.requested_food_items || [];
+        return <View key={request.food_request_id} style={[styles.tradeCard, shadows.card,
+          request.status === 'accepted' && styles.tradeCardAccepted, request.status === 'rejected' && styles.tradeCardDeclined]}>
+          <View style={styles.tradeCardTop}><View style={styles.avatar}><Text style={styles.avatarLabel}>{other?.username?.[0]?.toUpperCase() || '?'}</Text></View>
+            <View style={styles.tradePerson}><Text style={styles.tradePersonName}>{other?.username || 'A villager'} proposed a trade</Text><Text style={styles.tradePersonMeta}>{isRequester ? 'You sent this request' : 'Incoming village request'}</Text></View>
+            <View style={styles.statusPill}><Text style={styles.statusPillLabel}>{request.status}</Text></View>
           </View>
-        </View>
-
-        <View style={styles.summaryRow}>
-          <View style={[styles.summaryCard, shadows.soft]}>
-            <Text style={styles.summaryValue}>1</Text>
-            <Text style={styles.summaryLabel}>needs your reply</Text>
-          </View>
-          <View style={[styles.summaryCard, styles.summaryCardBlue]}>
-            <Text style={styles.summaryValue}>3</Text>
-            <Text style={styles.summaryLabel}>active trades</Text>
-          </View>
-        </View>
-
-        <View style={styles.sectionHeading}>
-          <View>
-            <Text style={styles.eyebrow}>Incoming</Text>
-            <Text style={styles.sectionTitle}>Waiting for you</Text>
-          </View>
-          <Text style={styles.sectionMeta}>Today</Text>
-        </View>
-
-        <View
-          style={[
-            styles.tradeCard,
-            shadows.card,
-            outcome === 'accepted' && styles.tradeCardAccepted,
-            outcome === 'declined' && styles.tradeCardDeclined,
-          ]}
-        >
-          <View style={styles.tradeCardTop}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarLabel}>M</Text>
-            </View>
-            <View style={styles.tradePerson}>
-              <Text style={styles.tradePersonName}>Hasita proposed a trade</Text>
-              <Text style={styles.tradePersonMeta}>Between your two pantries</Text>
-            </View>
-            <View
-              style={[
-                styles.statusPill,
-                outcome === 'accepted' && styles.statusPillAccepted,
-                outcome === 'declined' && styles.statusPillDeclined,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.statusPillLabel,
-                  outcome === 'accepted' && styles.statusPillLabelAccepted,
-                  outcome === 'declined' && styles.statusPillLabelDeclined,
-                ]}
-              >
-                {outcome === 'pending' ? 'Pending' : outcome === 'accepted' ? 'Accepted' : 'Declined'}
-              </Text>
-            </View>
-          </View>
-
           <View style={styles.exchangeRow}>
-            <View style={styles.exchangeItem}>
-              <Text style={styles.exchangeLabel}>Mika offers</Text>
-              <View style={styles.exchangeIcon}>
-                <FoodIcon name="eggs" size={40} />
-              </View>
-              <Text style={styles.exchangeValue}>4 eggs</Text>
-              <Text style={styles.exchangeMeta}>from Mika's pantry</Text>
+            <View style={styles.exchangeItem}><Text style={styles.exchangeLabel}>{isRequester ? 'You offer' : 'They offer'}</Text>
+              {offered.map((row) => <View key={row.item_id} style={styles.itemLine}><FoodIcon name={iconFor(row.item?.icon)} size={30} /><Text style={styles.exchangeValue}>{row.qty} x {row.item?.name || 'Pantry item'}</Text></View>)}
             </View>
             <Icon name="swap" color={colors.sageDeep} />
-            <View style={styles.exchangeItem}>
-              <Text style={styles.exchangeLabel}>Mika requests</Text>
-              <View style={styles.exchangeIcon}>
-                <FoodIcon name="calamansi" size={40} />
-              </View>
-              <Text style={styles.exchangeValue}>2 calamansi</Text>
-              <Text style={styles.exchangeMeta}>from your pantry</Text>
+            <View style={styles.exchangeItem}><Text style={styles.exchangeLabel}>{isRequester ? 'You request' : 'They request'}</Text>
+              {requested.map((row) => <View key={row.item_id} style={styles.itemLine}><FoodIcon name={iconFor(row.item?.icon)} size={30} /><Text style={styles.exchangeValue}>{row.qty} x {row.item?.name || 'Pantry item'}</Text></View>)}
             </View>
           </View>
-
-          {outcome === 'pending' && countering && (
-            <View style={styles.counterBox}>
-              <Field label="You'll receive · Eggs" placeholder="How many would you like?" />
-              <View style={{ height: 10 }} />
-              <Field label="You'll give · Calamansi" placeholder="How many can you share?" />
-            </View>
-          )}
-
-          {outcome === 'pending' && (
-            <View style={styles.tradeActions}>
-              <Button style={[styles.acceptAction, shadows.primaryButton]} onPress={() => setOutcome('accepted')}>
-                <Text style={styles.acceptLabel}>Accept</Text>
-              </Button>
-              <Button style={styles.counterAction} onPress={() => setCountering((current) => !current)}>
-                <Text style={styles.counterLabel}>Counter</Text>
-              </Button>
-              <Button style={styles.declineAction} onPress={() => setOutcome('declined')}>
-                <Text style={styles.declineLabel}>Decline</Text>
-              </Button>
-            </View>
-          )}
-
-          {outcome !== 'pending' && (
-            <View style={styles.tradeResult}>
-              <Icon name={outcome === 'accepted' ? 'check' : 'leaf'} color={outcome === 'accepted' ? colors.sageDeep : colors.brownSoft} />
-              <Text style={[styles.tradeResultLabel, outcome === 'declined' && { color: colors.brownSoft }]}>
-                {outcome === 'accepted' ? "You accepted Mika's trade." : 'You quietly declined this trade.'}
-              </Text>
-            </View>
-          )}
-        </View>
-
-        <View style={[styles.sectionHeading, styles.historyHeading]}>
-          <View>
-            <Text style={styles.eyebrow}>Recent</Text>
-            <Text style={styles.sectionTitle}>Trade history</Text>
-          </View>
-        </View>
-        <View style={styles.pastTrade}>
-          <View style={styles.pastTradeIcon}>
-            <FoodIcon name="eggs" size={32} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.tradePersonName}>Rice for coconut milk · Tala</Text>
-            <Text style={styles.tradePersonMeta}>Accepted · Yesterday</Text>
-          </View>
-          <Icon name="chevron" color={colors.brownSoft} />
-        </View>
-      </ScrollView>
-
-      <BottomNav current="trades" onNavigate={onNavigate} />
-    </View>
-  );
+          <Text style={styles.turnNote}>{myTurn ? 'It is your turn to respond.' : request.status === 'accepted' ? 'This trade was accepted.' : request.status === 'completed' ? 'This trade is complete.' : ''}</Text>
+          {myTurn && ['pending', 'countered'].includes(request.status) && <View style={styles.tradeActions}>
+            {request.status === 'pending' && !isRequester ? <>
+              <Button disabled={isBusy} style={[styles.acceptAction, shadows.primaryButton]} onPress={() => void act(request, 'accept')}><Text style={styles.acceptLabel}>Accept</Text></Button>
+              <Button disabled={isBusy} style={styles.counterAction} onPress={() => void act(request, 'counter')}><Text style={styles.counterLabel}>Counter</Text></Button>
+              <Button disabled={isBusy} style={styles.declineAction} onPress={() => void act(request, 'reject')}><Text style={styles.declineLabel}>Decline</Text></Button>
+            </> : <>
+              <Button disabled={isBusy} style={styles.counterAction} onPress={() => void act(request, 'offer')}><Text style={styles.counterLabel}>Send offer</Text></Button>
+              <Button disabled={isBusy} style={styles.declineAction} onPress={() => void act(request, 'reject')}><Text style={styles.declineLabel}>Decline</Text></Button>
+            </>}
+          </View>}
+          {request.status === 'accepted' && isRequester && <Button style={[styles.acceptAction, styles.actionWide]} disabled={isBusy} onPress={() => onNavigate('complete', { requestId: request.food_request_id })}><Text style={styles.acceptLabel}>Mark exchange complete</Text></Button>}
+          {request.status === 'completed' && isRequester && !request.thanked && <Button style={[styles.acceptAction, styles.actionWide]} disabled={isBusy} onPress={() => void act(request, 'thank')}><Text style={styles.acceptLabel}>Send thank-you</Text></Button>}
+        </View>;
+      })}
+    </ScrollView>
+    <BottomNav current="trades" onNavigate={onNavigate} />
+  </View>;
 }
 
 const styles = StyleSheet.create({
@@ -278,6 +225,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,250,240,0.6)',
   },
   tradeResultLabel: { color: colors.sageDeep, fontFamily: fonts.sans, fontSize: 11 },
+  itemLine: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  turnNote: { color: colors.brownSoft, fontSize: 11, marginBottom: 8 },
+  error: { marginHorizontal: 22, marginBottom: 14, color: colors.coral, fontFamily: fonts.sans, textAlign: 'center' },
+  empty: { marginHorizontal: 22, marginVertical: 28, padding: 20, color: colors.brownSoft, fontFamily: fonts.sans, textAlign: 'center' },
+  emptyTitle: { marginBottom: 7, color: colors.brown, fontFamily: fonts.serif, fontSize: 20 },
+  actionWide: { minHeight: 46, alignItems: 'center', justifyContent: 'center', borderRadius: 17, marginTop: 8 },
   pastTrade: {
     flexDirection: 'row',
     alignItems: 'center',

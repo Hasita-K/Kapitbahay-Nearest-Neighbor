@@ -7,6 +7,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthScreen } from './src/screens/AuthScreen';
 import { VillageTabs } from './src/navigation/BottomNav';
 import type { AuthResult } from './src/services/auth';
+import { setAccessToken } from './src/services/api';
+import { AboutScreen } from './src/screens/AboutScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -31,6 +33,7 @@ export default function App() {
             <AuthScreen
               onAuthenticated={(result) => {
                 setSession(result.session);
+                setAccessToken(result.session.access_token);
                 props.navigation.replace('Main');
               }}
               onAbout={() => props.navigation.navigate('About')}
@@ -38,9 +41,15 @@ export default function App() {
           )}
         </Stack.Screen>
         <Stack.Screen name="Main">
-          {() => <VillageTabs session={session} />}
+          {(props) => <VillageTabs session={session} onLogout={() => {
+            setAccessToken(null);
+            setSession(null);
+            props.navigation.replace('Auth');
+          }} />}
         </Stack.Screen>
-        {/* Add AboutScreen here once converted */}
+        <Stack.Screen name="About">
+          {(props) => <AboutScreen onBack={() => props.navigation.goBack()} />}
+        </Stack.Screen>
         {/* Add AddVillagerModal here with options={{ presentation: 'modal' }} once converted */}
       </Stack.Navigator>
     </NavigationContainer>
