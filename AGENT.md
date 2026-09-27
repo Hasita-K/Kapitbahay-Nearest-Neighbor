@@ -17,7 +17,7 @@
 
 # File paths
 - if you are trying to access any of the files here is the compelte file path at the moment
-friendly-neighbor/             # Root Directory of the Repository
+KNN/             # Root Directory of the Repository
 ├── .git/                     # Git metadata (Hidden)
 ├── AGENT.md                  # Project-wide AI context rules and commands (This File)
 │

@@ -9,3 +9,6 @@ node_modules/
 .expo/
 dist/
 npm-debug.log
+
+node_modules/
+.env
