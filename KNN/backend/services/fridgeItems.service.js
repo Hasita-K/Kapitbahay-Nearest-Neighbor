@@ -44,7 +44,7 @@ async function update(supabase, fridgeItemId, updates) {
   const { data, error } = await supabase
     .from('fridge_items')
     .update(allowed)
-    .eq('fridge_item_id', fridgeItemId)
+    .eq('fridge_items_id', fridgeItemId)
     .select()
     .single();
   if (error) throwHttp(error.message, 400);
@@ -55,7 +55,7 @@ async function remove(supabase, fridgeItemId) {
   const { error } = await supabase
     .from('fridge_items')
     .delete()
-    .eq('fridge_item_id', fridgeItemId);
+    .eq('fridge_items_id', fridgeItemId);
   if (error) throwHttp(error.message, 400);
   return { removed: true };
 }

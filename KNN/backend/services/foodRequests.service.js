@@ -70,7 +70,26 @@ async function listForUser(supabase, userId) {
     .select('*, requested_food_items(*), offered_items(*)')
     .or(`requester_id.eq.${userId},receiver_id.eq.${userId}`);
   if (error) throwHttp(error.message, 400);
-  return data;
+  if (!data?.length) return [];
+
+  const profileIds = [...new Set(data.flatMap((request) => [request.requester_id, request.receiver_id]))];
+  const { data: profiles, error: profileError } = await supabase.from('profiles')
+    .select('id,username,unique_friend_code').in('id', profileIds);
+  if (profileError) throwHttp(profileError.message, 400);
+  const profileById = new Map((profiles || []).map((profile) => [profile.id, profile]));
+
+  const { data: items, error: itemsError } = await supabase.from('fridge_items')
+    .select('fridge_items_id,owner_id,name,icon,count').in('owner_id', profileIds);
+  if (itemsError) throwHttp(itemsError.message, 400);
+  const itemById = new Map((items || []).map((item) => [item.fridge_items_id, item]));
+
+  return data.map((request) => ({
+    ...request,
+    requester: profileById.get(request.requester_id) || null,
+    receiver: profileById.get(request.receiver_id) || null,
+    requested_food_items: (request.requested_food_items || []).map((row) => ({ ...row, item: itemById.get(row.item_id) || null })),
+    offered_items: (request.offered_items || []).map((row) => ({ ...row, item: itemById.get(row.item_id) || null })),
+  }));
 }
 
 async function accept(supabase, userId, requestId) {

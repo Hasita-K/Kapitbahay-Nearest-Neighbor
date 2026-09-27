@@ -19,6 +19,15 @@ async function create(req, res, next) {
   }
 }
 
+async function lookup(req, res, next) {
+  try {
+    const profile = await service.lookupByCode(req.supabase, req.query.code, req.user.id);
+    res.json({ data: profile });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function addMember(req, res, next) {
   try {
     const member = await service.addMember(req.supabase, req.params.villageId, req.body.friend_user_id);
@@ -37,4 +46,4 @@ async function removeMember(req, res, next) {
   }
 }
 
-module.exports = { listMine, create, addMember, removeMember };
+module.exports = { listMine, lookup, create, addMember, removeMember };

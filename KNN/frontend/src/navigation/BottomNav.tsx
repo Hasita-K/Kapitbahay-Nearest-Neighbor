@@ -8,8 +8,13 @@ import { HomeScreen } from '../screens/HomeScreen';
 import { MyPantryScreen } from '../screens/MyPantryScreen';
 import { TradeScreen } from '../screens/TradeScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
+import { VillagesScreen } from '../screens/ProfileScreen';
+import { FriendPantryScreen } from '../screens/FriendPantryScreen';
+import { CompleteScreen } from '../screens/CompleteScreen';
 import type { Screen } from '../types';
 import type { AuthSession } from '../services/auth';
+import { setAccessToken } from '../services/api';
+import { useEffect } from 'react';
 
 type Tab = 'home' | 'my-pantry' | 'trades' | 'profile';
 
@@ -43,21 +48,27 @@ export function BottomNav({ current, onNavigate }: BottomNavProps) {
 
 // App.tsx mounts this component as its Main screen. Keep the tab selection
 // here so the converted screens can share the custom bottom navigation.
-export function VillageTabs({ session: _session }: { session: AuthSession | null }) {
-  const [current, setCurrent] = useState<Tab>('home');
-  const navigate = (screen: Screen) => {
-    if (screen === 'home') setCurrent('home');
-    if (screen === 'my-pantry') setCurrent('my-pantry');
-    if (screen === 'trade') setCurrent('trades');
-    if (screen === 'profile') setCurrent('profile');
+export function VillageTabs({ session, onLogout }: { session: AuthSession | null; onLogout: () => void }) {
+  const [current, setCurrent] = useState<Screen>('home');
+  const [routeParams, setRouteParams] = useState<Record<string, string>>({});
+  const [activeVillageId, setActiveVillageId] = useState<string | undefined>();
+  useEffect(() => { setAccessToken(session?.access_token || null); }, [session?.access_token]);
+
+  const navigate = (screen: Screen, params: Record<string, string> = {}) => {
+    if (screen === 'auth') { onLogout(); return; }
+    if (screen === 'home' && params.villageId) setActiveVillageId(params.villageId);
+    setRouteParams(params);
+    setCurrent(screen);
   };
 
-  if (current === 'home') {
-    return <HomeScreen navigation={{ navigate: (screen: Screen) => navigate(screen) }} />;
-  }
-  if (current === 'trades') return <TradeScreen onNavigate={navigate} />;
+  if (current === 'home') return <HomeScreen navigation={{ navigate }} activeVillageId={activeVillageId} />;
+  if (current === 'my-pantry') return <MyPantryScreen onNavigate={navigate} />;
+  if (current === 'trade') return <TradeScreen onNavigate={navigate} />;
   if (current === 'profile') return <ProfileScreen onNavigate={navigate} />;
-  return <MyPantryScreen onNavigate={navigate} />;
+  if (current === 'villages') return <VillagesScreen onNavigate={navigate} />;
+  if (current === 'friend-pantry') return <FriendPantryScreen onNavigate={navigate} friendId={routeParams.ownerId || ''} friendName={routeParams.friendName || 'Neighbor'} />;
+  if (current === 'complete') return <CompleteScreen onNavigate={navigate} requestId={routeParams.requestId || ''} />;
+  return <HomeScreen navigation={{ navigate }} />;
 }
 
 const styles = StyleSheet.create({

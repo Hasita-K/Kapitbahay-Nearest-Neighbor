@@ -1,5 +1,5 @@
 // MyPantryScreen.tsx
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../components/Button';
 import { Field } from '../components/Field';
@@ -7,19 +7,14 @@ import { FoodIcon } from '../components/FoodIcon';
 import { Icon } from '../components/Icon';
 import { BottomNav } from '../navigation/BottomNav';
 import { colors, fonts, radii, shadows, tileTones } from '../theme/theme';
-import type { FoodName, Screen } from '../types';
+import type { Screen } from '../types';
+import { apiErrorMessage } from '../services/api';
+import { createFridgeItem, deleteFridgeItem, getFridgeItems, updateFridgeItem, type FridgeItem } from '../services/data';
+import type { FoodName } from '../types';
 
-const pantryItems: { icon: FoodName; name: string; count: number; tone: keyof typeof tileTones }[] = [
-  { icon: 'eggs', name: 'Eggs', count: 6, tone: 'sage' },
-  { icon: 'calamansi', name: 'Calamansi', count: 8, tone: 'blue' },
-  { icon: 'garlic', name: 'Garlic', count: 3, tone: 'blush' },
-  { icon: 'coconut', name: 'Coconut milk', count: 2, tone: 'blue' },
-  { icon: 'chili', name: 'Siling labuyo', count: 5, tone: 'coral' },
-  { icon: 'rice', name: 'Rice', count: 1, tone: 'sage' },
-];
-
-function AddItemSheet({ onClose }: { onClose: () => void }) {
-  const [activeCategory, setActiveCategory] = useState(0);
+function AddItemSheet({ onClose, onAdd, busy }: { onClose: () => void; onAdd: (name: string, count: number) => Promise<void>; busy: boolean }) {
+  const [name, setName] = useState('');
+  const [count, setCount] = useState('1');
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.modalBackdrop}>
@@ -29,21 +24,12 @@ function AddItemSheet({ onClose }: { onClose: () => void }) {
           </Button>
           <Text style={styles.eyebrow}>A little extra?</Text>
           <Text style={styles.sheetTitle}>Add to your pantry</Text>
-          <View style={styles.categoryRow}>
-            {['Produce', 'Pantry', 'Dairy', 'Other'].map((name, i) => (
-              <Button
-                key={name}
-                style={[styles.categoryChip, activeCategory === i && styles.categoryChipActive]}
-                onPress={() => setActiveCategory(i)}
-              >
-                <Text style={[styles.categoryLabel, activeCategory === i && styles.categoryLabelActive]}>{name}</Text>
-              </Button>
-            ))}
-          </View>
           <View style={{ marginTop: 25, marginBottom: 18 }}>
-            <Field label="Ingredient" placeholder="What do you have?" />
+            <Field label="Ingredient" placeholder="What do you have?" value={name} onChangeText={setName} />
+            <View style={{ height: 12 }} />
+            <Field label="Amount" placeholder="1" keyboardType="numeric" value={count} onChangeText={setCount} />
           </View>
-          <Button style={[styles.primary, styles.wide, shadows.primaryButton]} onPress={onClose}>
+          <Button style={[styles.primary, styles.wide, shadows.primaryButton]} disabled={busy || !name.trim()} onPress={() => onAdd(name.trim(), Math.max(0, Number(count) || 0))}>
             <Text style={styles.primaryLabel}>Add ingredient</Text>
             <Icon name="plus" />
           </Button>
@@ -54,13 +40,53 @@ function AddItemSheet({ onClose }: { onClose: () => void }) {
 }
 
 export function MyPantryScreen({ onNavigate }: { onNavigate: (screen: Screen) => void }) {
-  const [selected, setSelected] = useState<number | null>(null);
-  const [counts, setCounts] = useState(pantryItems.map((item) => item.count));
+  const [items, setItems] = useState<FridgeItem[]>([]);
+  const [selected, setSelected] = useState<FridgeItem | null>(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
 
-  const adjust = (amount: number) => {
-    if (selected === null) return;
-    setCounts((current) => current.map((count, index) => (index === selected ? Math.max(0, count + amount) : count)));
+  const loadItems = async () => {
+    try { setError(''); setItems(await getFridgeItems()); }
+    catch (e) { setError(apiErrorMessage(e)); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { void loadItems(); }, []);
+
+  const adjust = async (amount: number) => {
+    if (!selected) return;
+    const count = Math.max(0, selected.count + amount);
+    setBusy(true);
+    setSelected({ ...selected, count });
+    setItems((current) => current.map((item) => item.fridge_items_id === selected.fridge_items_id ? { ...item, count } : item));
+    try { await updateFridgeItem(selected.fridge_items_id, { count }); }
+    catch (e) { setError(apiErrorMessage(e)); void loadItems(); }
+    finally { setBusy(false); }
+  };
+
+  const addItem = async (name: string, count: number) => {
+    setBusy(true);
+    try {
+      const item = await createFridgeItem({ name, count });
+      setItems((current) => [...current, item]);
+      setShowAdd(false);
+    } catch (e) { setError(apiErrorMessage(e)); }
+    finally { setBusy(false); }
+  };
+
+  const removeItem = async () => {
+    if (!selected) return;
+    try {
+      await deleteFridgeItem(selected.fridge_items_id);
+      setItems((current) => current.filter((item) => item.fridge_items_id !== selected.fridge_items_id));
+      setSelected(null);
+    } catch (e) { setError(apiErrorMessage(e)); }
+  };
+
+  const foodIcon = (icon: string | null): FoodName => {
+    const names: FoodName[] = ['eggs', 'calamansi', 'garlic', 'coconut', 'chili', 'rice', 'soup', 'herbs'];
+    return names.includes(icon as FoodName) ? icon as FoodName : 'rice';
   };
 
   return (
@@ -71,7 +97,7 @@ export function MyPantryScreen({ onNavigate }: { onNavigate: (screen: Screen) =>
             <Icon name="arrow" />
           </Button>
           <View style={styles.headerTitle}>
-            <Text style={styles.eyebrow}>6 ingredients to share</Text>
+            <Text style={styles.eyebrow}>{items.length} ingredients to share</Text>
             <Text style={styles.title}>My personal pantry</Text>
           </View>
           <Button style={styles.iconButtonPale} onPress={() => setShowAdd(true)} accessibilityLabel="Add an item">
@@ -84,47 +110,49 @@ export function MyPantryScreen({ onNavigate }: { onNavigate: (screen: Screen) =>
           <Text style={styles.introText}>Keep counts loose and friendly. A close guess is perfectly fine.</Text>
         </View>
 
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {loading ? <Text style={styles.empty}>Loading your pantry…</Text> : null}
+        {!loading && !items.length && !error ? <Text style={styles.empty}>Your pantry is empty. Add an ingredient to get started.</Text> : null}
         <View style={styles.itemGrid}>
-          {pantryItems.map((item, index) => (
+          {items.map((item, index) => (
             <Button
-              key={item.name}
+              key={item.fridge_items_id}
               style={[
                 styles.itemTile,
-                { backgroundColor: tileTones[item.tone] },
-                selected === index && styles.itemTileSelected,
+                { backgroundColor: Object.values(tileTones)[index % Object.values(tileTones).length] },
+                selected?.fridge_items_id === item.fridge_items_id && styles.itemTileSelected,
               ]}
-              onPress={() => setSelected(index)}
+              onPress={() => setSelected(item)}
             >
-              <FoodIcon name={item.icon} size={40} />
+              <FoodIcon name={foodIcon(item.icon)} size={40} />
               <Text style={styles.itemName}>{item.name}</Text>
-              <Text style={styles.itemCount}>
-                {counts[index]} {item.name === 'Rice' ? 'cup' : 'left'}
-              </Text>
+              <Text style={styles.itemCount}>{item.count} left</Text>
             </Button>
           ))}
         </View>
       </ScrollView>
 
-      {selected !== null && (
+      {selected && (
         <View style={[styles.itemEditor, shadows.card]}>
           <View>
             <Text style={styles.eyebrow}>Update amount</Text>
-            <Text style={styles.editorItemName}>{pantryItems[selected].name}</Text>
+            <Text style={styles.editorItemName}>{selected.name}</Text>
           </View>
           <View style={styles.stepper}>
-            <Button style={styles.iconButton} onPress={() => adjust(-1)} accessibilityLabel="Decrease count">
+            <Button style={styles.iconButton} disabled={busy || selected.count <= 0} onPress={() => void adjust(-1)} accessibilityLabel="Decrease count">
               <Icon name="minus" />
             </Button>
-            <Text style={styles.stepperValue}>{counts[selected]}</Text>
-            <Button style={styles.iconButtonFilled} onPress={() => adjust(1)} accessibilityLabel="Increase count">
+            <Text style={styles.stepperValue}>{selected.count}</Text>
+            <Button style={styles.iconButtonFilled} disabled={busy} onPress={() => void adjust(1)} accessibilityLabel="Increase count">
               <Icon name="plus" color={colors.paper} />
             </Button>
           </View>
+          <Button onPress={() => void removeItem()} accessibilityLabel="Remove ingredient"><Icon name="close" color={colors.coral} /></Button>
         </View>
       )}
 
-      <BottomNav current="home" onNavigate={onNavigate} />
-      {showAdd && <AddItemSheet onClose={() => setShowAdd(false)} />}
+      <BottomNav current="my-pantry" onNavigate={onNavigate} />
+      {showAdd && <AddItemSheet onClose={() => setShowAdd(false)} onAdd={addItem} busy={busy} />}
     </View>
   );
 }
@@ -206,6 +234,8 @@ const styles = StyleSheet.create({
   itemTileSelected: { borderColor: 'rgba(120,144,106,0.55)' },
   itemName: { fontFamily: fonts.serif, fontSize: 14, color: colors.brown },
   itemCount: { fontFamily: fonts.sansBold, fontSize: 9, color: colors.brownSoft },
+  empty: { marginHorizontal: 25, marginVertical: 20, color: colors.brownSoft, fontFamily: fonts.sans, textAlign: 'center' },
+  error: { marginHorizontal: 22, marginVertical: 10, color: colors.coral, fontFamily: fonts.sans, textAlign: 'center' },
   itemEditor: {
     position: 'absolute',
     left: 20,

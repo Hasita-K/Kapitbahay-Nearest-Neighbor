@@ -26,14 +26,14 @@ async function incrementColumn(column, userId) {
   const { data: current, error: readError } = await supabaseAdmin
     .from('profile_stats')
     .select(column)
-    .eq('profile_id', userId)
+    .eq('profiles_id', userId)
     .single();
   if (readError) throwHttp(readError.message, 500);
 
   const { error: writeError } = await supabaseAdmin
     .from('profile_stats')
     .update({ [column]: current[column] + 1 })
-    .eq('profile_id', userId);
+    .eq('profiles_id', userId);
   if (writeError) throwHttp(writeError.message, 500);
 }
 
